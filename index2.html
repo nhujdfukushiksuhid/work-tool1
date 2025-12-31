@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支援計画作成AI - Ver.6.0 Narrative</title>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* --- Design System: Orange & Green (Warmth, Growth, Security) --- */
+        :root {
+            --primary: #f97316;       /* Orange 500 */
+            --primary-dark: #c2410c;  
+            --primary-light: #fff7ed; 
+            
+            --accent: #10b981;        /* Emerald 500 */
+            --accent-dark: #047857;   
+            --accent-light: #ecfdf5;  
+
+            --bg-body: #f1f5f9;       
+            --surface: #ffffff;
+            --text-main: #334155;     
+            --text-muted: #64748b;    
+            --border: #cbd5e1;
+
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        }
+
+        /* Base */
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+
+        /* Header */
+        header { text-align: center; margin-bottom: 40px; }
+        h1 {
+            font-size: 2.2rem; color: var(--text-main); margin: 0 0 16px 0;
+            display: inline-flex; align-items: center; gap: 12px; letter-spacing: -0.05em;
+        }
+        .tag-ver {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; font-size: 0.9rem; padding: 4px 12px; border-radius: 99px;
+            vertical-align: middle; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.3);
+        }
+        .subtitle { color: var(--text-muted); margin-bottom: 24px; }
+
+        .security-alert {
+            background-color: var(--accent-light);
+            border: 2px solid var(--accent);
+            color: var(--accent-dark);
+            display: inline-flex; align-items: center; gap: 12px;
+            padding: 12px 30px; border-radius: 50px;
+            font-weight: bold; margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.1);
+        }
+        .security-icon { font-size: 1.4rem; }
+
+        /* Logic Cards */
+        .logic-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px; margin-bottom: 40px;
+        }
+        .logic-card {
+            background: var(--surface); padding: 24px; border-radius: var(--radius);
+            box-shadow: var(--shadow); border: 1px solid var(--border);
+            position: relative; overflow: hidden;
+        }
+        .logic-card::before {
+            content: ''; position: absolute; top:0; left:0; width:6px; height:100%;
+            background: var(--primary);
+        }
+        .logic-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 8px; color: var(--text-main); }
+        .logic-desc { font-size: 0.9rem; color: var(--text-muted); }
+
+        /* Drop Zone */
+        .drop-wrapper {
+            background: var(--surface); padding: 10px; border-radius: var(--radius);
+            box-shadow: var(--shadow); margin-bottom: 30px;
+        }
+        .drop-zone {
+            border: 3px dashed #cbd5e1; border-radius: 8px; padding: 60px 20px;
+            background: #f8fafc; cursor: pointer; text-align: center;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary); background: var(--primary-light); transform: scale(1.005);
+        }
+        .drop-title { font-size: 1.5rem; font-weight: bold; color: var(--text-main); margin-bottom: 8px; }
+
+        /* Result Area */
+        .control-panel {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); padding: 20px 30px; border-radius: var(--radius);
+            box-shadow: var(--shadow); margin-bottom: 20px; flex-wrap: wrap; gap: 16px;
+        }
+        .stat { font-weight: bold; font-size: 1.1rem; }
+        .stat span { color: var(--accent); font-size: 1.5rem; margin-left: 8px; }
+
+        .btn-group { display: flex; gap: 12px; }
+        button {
+            border: none; padding: 12px 24px; border-radius: 50px; font-weight: bold;
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
+            transition: all 0.2s; font-size: 0.95rem;
+        }
+        .btn-main { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .btn-main:hover { transform: translateY(-2px); background: var(--accent-dark); }
+        .btn-sub { background: white; border: 2px solid var(--border); color: var(--text-main); }
+        .btn-sub:hover { background: var(--bg-body); }
+
+        /* Table */
+        .table-wrap {
+            overflow-x: auto; background: var(--surface); border-radius: var(--radius);
+            box-shadow: var(--shadow); border: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; white-space: normal; }
+        th {
+            background: #f1f5f9; padding: 16px; text-align: left; font-weight: bold;
+            color: var(--text-main); border-bottom: 2px solid #cbd5e1;
+            position: sticky; top: 0; z-index: 10;
+        }
+        td { padding: 16px; border-bottom: 1px solid var(--border); vertical-align: top; font-size: 0.9rem; }
+        
+        .col-life { background-color: #fffbeb; }
+        .col-work { background-color: #f0fdf4; }
+        .col-future { background-color: #eff6ff; }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 800; color: white; margin-right: 4px;
+        }
+        .badge-A { background: #3b82f6; } .badge-B { background: #ef4444; }
+        .badge-C { background: #f59e0b; } .badge-D { background: #10b981; }
+        
+        .badge-high { background: #10b981; border: 1px solid #059669; color: #fff; } /* Stable/Good */
+        .badge-low { background: #f59e0b; border: 1px solid #d97706; color: #fff; } /* Needs Support */
+
+        /* Loader */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.95);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid var(--primary-light);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .hidden { display: none; }
+        .fade-in { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🌱 支援計画作成AI <span class="tag-ver">Ver.6.0 Narrative</span></h1>
+        <p class="subtitle">「できている人」には「伸ばす」提案を。「課題がある人」には「支える」提案を。</p>
+        
+        <div class="security-alert">
+            <span class="security-icon">🔒</span>
+            <span>セキュリティ最強：データは外部に一切送信されず、あなたのPC内だけで完結します</span>
+        </div>
+    </header>
+
+    <div class="logic-grid">
+        <div class="logic-card">
+            <div class="logic-title">📊 ポジネガ分析 (Context)</div>
+            <div class="logic-desc">日報から「安定」「不調」を判定。できている人に「できるようになろう」という頓珍漢な提案を防ぎます。</div>
+        </div>
+        <div class="logic-card">
+            <div class="logic-title">🎰 全項目スロット生成 (Variety)</div>
+            <div class="logic-desc">方針・長期・短期目標も含め、すべての項目で数千パターンの文章を生成。かぶりを徹底排除します。</div>
+        </div>
+        <div class="logic-card">
+            <div class="logic-title">🛡️ 完全ローカル処理 (Security)</div>
+            <div class="logic-desc">AIといってもクラウドには繋がりません。ブラウザの中で動くプログラムなので、機密情報も安全です。</div>
+        </div>
+    </div>
+
+    <div class="drop-wrapper">
+        <div id="dropZone" class="drop-zone">
+            <div class="drop-title">Excelファイルをここにドラッグ＆ドロップ</div>
+            <div style="color:var(--text-muted);">またはクリックしてファイルを選択 (.xlsx / .xls)</div>
+            <input type="file" id="fileInput" accept=".xlsx, .xls" style="display:none">
+        </div>
+    </div>
+
+    <div id="resultArea" class="hidden fade-in">
+        <div class="control-panel">
+            <div class="stat">生成完了: <span id="countDisplay">0</span> 名</div>
+            <div class="btn-group">
+                <button class="btn-sub" id="retryBtn">🎲 全員書き直す</button>
+                <button class="btn-sub" id="copyBtn">📋 コピー</button>
+                <button class="btn-main" id="downloadBtn">💾 CSV保存</button>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table id="resultTable">
+                <thead>
+                    <tr>
+                        <th style="min-width:140px;">対象者名</th>
+                        <th style="min-width:120px;">分析結果</th>
+                        <th style="min-width:320px;">総合的な支援方針</th>
+                        <th style="min-width:280px;">長期目標</th>
+                        <th style="min-width:280px;">短期目標</th>
+                        <th style="min-width:260px;" class="col-life">目標1 (生活)</th>
+                        <th style="min-width:260px;" class="col-life">支援1</th>
+                        <th style="min-width:260px;" class="col-work">目標2 (作業)</th>
+                        <th style="min-width:260px;" class="col-work">支援2</th>
+                        <th style="min-width:260px;" class="col-future">目標3 (就労)</th>
+                        <th style="min-width:260px;" class="col-future">支援3</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="overlay">
+    <div class="spinner"></div>
+    <h3 style="margin-top:20px; color:var(--text-main);">AIが文章を構成中...</h3>
+    <p style="color:var(--text-muted);">方針・目標・支援の全項目を独自生成しています</p>
+</div>
+
+<script>
+/**
+ * Ver 6.0 Logic Engine: Grand Narrative
+ * 方針・長期・短期目標も含めた「全項目」の生成バリエーションを極大化。
+ */
+
+// --- 1. Analysis Keywords ---
+const KEYWORDS = {
+    types: {
+        A: ['PC','入力','就職','仕事','スキル','資格','実習','求人','Word','Excel'],
+        B: ['体調','病院','薬','休み','遅刻','不調','通院','不安','しんどい','眠気'],
+        C: ['会話','トラブル','怒','声','相談','感情','他害','イライラ','喧嘩'],
+        D: ['服','挨拶','忘れ','片付け','掃除','ルール','風呂','歯磨き','金銭']
+    },
+    sentiment: {
+        positive: ['できた','安定','良好','意欲','笑顔','集中','順調','問題なく','丁寧','早い','正確','参加','楽し','皆勤'],
+        negative: ['休み','遅刻','早退','不調','トラブル','興奮','拒否','忘れ','ミス','注意','中断','帰宅','停止','不安定']
+    }
+};
+
+// --- 2. Narrative Vocabulary (Updated for Grand Variety) ---
+const VOCAB = {
+    // 共通部品
+    openers: [
+        "まずは", "日々の活動を通じて", "本人のペースを大切にし", "現在の状況を踏まえ", 
+        "将来的な展望を見据え", "ご本人の意向を尊重し", "環境の変化に合わせ", 
+        "本人の強みを活かすため", "長期的な視点に立ち", "日頃の様子から", 
+        "安定した基盤の上で", "自信を育むために", "着実なステップとして"
+    ],
+    
+    // 修飾語 (High: Maintain/Enhance, Low: Improve/Support)
+    modifiers: {
+        high: ["引き続き", "安定して", "主体的に", "自信を持って", "リーダーシップを発揮し", "さらに", "高い意識で", "積極的に"],
+        low:  ["少しずつ", "着実に", "焦らず", "段階的に", "支援員と共に", "まずは", "丁寧に", "無理なく"]
+    },
+
+    // --- NEW: Narrative Generators for Top 3 Columns ---
+    policy: {
+        high: [
+            "{opener}、現在の良好な状態を{mod}維持しつつ、さらなるスキルアップを目指す。",
+            "{mod}活動できている強みを活かし、{focus}への挑戦を後押しする。",
+            "{opener}、本人の主体性を尊重し、{mod}活動の幅を広げていけるよう支援する。",
+            "安定した生活リズムを基盤に、{focus}に向けた取り組みを{mod}進める。"
+        ],
+        low: [
+            "{opener}、心身の安定を最優先とし、{mod}生活リズムを整えることから始める。",
+            "課題となっている点に対し、{mod}向き合えるよう、手厚いサポートを行う。",
+            "{opener}、安心して過ごせる環境を整え、{mod}活動に参加できるよう支援する。",
+            "まずは{mod}信頼関係を構築し、困りごとを相談できる体制を作る。"
+        ],
+        focus: { // Type specific focus
+            A: "就労に向けた実践的なスキル習得",
+            B: "心身の健康管理と自己理解",
+            C: "円滑な対人関係の構築",
+            D: "自立した日常生活の確立"
+        }
+    },
+    long_goal: {
+        high: [
+            "{mod}社会生活を送り、{focus}を実現する。",
+            "自身の強みを活かし、{focus}状態で活躍する。",
+            "周囲から信頼され、{mod}{focus}できる。",
+            "自己実現に向け、{mod}キャリアを積み重ねる。"
+        ],
+        low: [
+            "心身共に安定し、{focus}できるようになる。",
+            "自身の課題を理解し、{mod}対処できるようになる。",
+            "支援を受けながら、{mod}{focus}生活を送る。",
+            "安心して地域で暮らすための{focus}を身につける。"
+        ],
+        focus: {
+            A: "一般就労",
+            B: "健康的な生活",
+            C: "穏やかな人間関係",
+            D: "自立した生活"
+        }
+    },
+    short_goal: {
+        high: [
+            "日々の活動の中で、{mod}リーダーシップを発揮する。",
+            "新しい課題にも{mod}挑戦し、経験を積む。",
+            "自身の体調や感情を{mod}コントロールし、維持する。",
+            "周囲の手本となるような行動を{mod}心がける。"
+        ],
+        low: [
+            "まずは{mod}通所し、生活のリズムを作る。",
+            "困った時には{mod}相談し、解決策を一緒に考える。",
+            "基本的なルールを{mod}理解し、守ることができる。",
+            "スタッフの助言を受け入れ、{mod}作業に取り組む。"
+        ]
+    },
+
+    // --- Individual Goals & Supports (Type Specific) ---
+    contents: {
+        life: {
+            topic: ["身だしなみの保持", "計画的な金銭管理", "自発的な挨拶", "生活リズムの維持", "確実な服薬管理", "整理整頓の徹底", "感染対策の実施"],
+            sup:   ["チェック表での確認", "出納帳の記入補助", "ロールプレイの実施", "リズム表の確認", "通院同行", "服薬カレンダー確認", "声掛け"]
+        },
+        work: {
+            topic: ["作業手順の遵守", "集中力の持続", "自発的な報連相", "不明点の質問", "チームワーク", "後片付けの徹底", "納期意識", "丁寧な言葉遣い"],
+            sup:   ["手順書の提示", "座席配置の調整", "タイミングの助言", "質問しやすい環境作り", "チェックリスト活用", "タイマー支援", "SST実施"]
+        },
+        future: {
+            topic: ["施設外就労での経験", "求人検索", "PCスキルの向上", "資格取得への挑戦", "応募書類の作成", "面接練習", "企業実習への参加"],
+            sup:   ["同行支援", "検索機操作補助", "応用課題の提供", "学習計画策定", "添削指導", "模擬面接", "実習先調整"]
+        }
+    },
+    
+    endings: {
+        goal_high: ["維持する。", "向上させる。", "目指す。", "広げていく。", "確立する。", "発揮する。"],
+        goal_low:  ["身につける。", "できるようになる。", "目指す。", "習慣化する。", "取り組む。", "意識する。"],
+        sup_high:  ["評価し自信に繋げる。", "更なるステップアップを促す。", "環境を整え見守る。", "本人の自主性に任せる。"],
+        sup_low:   ["手厚くサポートする。", "具体的に助言する。", "一緒に確認を行う。", "繰り返し声掛けを行う。", "環境調整を行う。"]
+    }
+};
+
+// --- Global State ---
+let lastWorkbook = null;
+const generatedHistory = new Set();
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const resultArea = document.getElementById('resultArea');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const tbody = document.querySelector('#resultTable tbody');
+
+// --- Event Listeners ---
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => {
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); });
+    document.body.addEventListener(e, ev => { ev.preventDefault(); ev.stopPropagation(); });
+});
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', handleDrop);
+fileInput.addEventListener('change', (e) => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+document.getElementById('retryBtn').addEventListener('click', () => { if(lastWorkbook) renderTable(lastWorkbook); });
+document.getElementById('copyBtn').addEventListener('click', copyToClipboard);
+document.getElementById('downloadBtn').addEventListener('click', downloadCSV);
+
+// --- Processing ---
+function handleDrop(e) {
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+}
+
+async function handleFile(file) {
+    loadingOverlay.classList.add('active');
+    generatedHistory.clear();
+    await new Promise(r => setTimeout(r, 600)); 
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            lastWorkbook = workbook;
+            renderTable(workbook);
+            loadingOverlay.classList.remove('active');
+            document.querySelector('.drop-wrapper').style.display = 'none';
+            resultArea.classList.remove('hidden');
+        } catch (err) {
+            console.error(err);
+            loadingOverlay.classList.remove('active');
+            alert(`読み込みエラー: ${err.message}\nExcelファイル(.xlsx)か確認してください。`);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// --- Analysis Logic ---
+function analyze(text) {
+    text = (text || "").toString();
+    
+    // 1. Determine Type
+    let typeScores = { A:0, B:0, C:0, D:0 };
+    Object.keys(KEYWORDS.types).forEach(t => {
+        KEYWORDS.types[t].forEach(w => { if(text.includes(w)) typeScores[t]++; });
+    });
+    let type = Object.keys(typeScores).reduce((a, b) => typeScores[a] > typeScores[b] ? a : b);
+    if(Object.values(typeScores).every(v => v === 0)) type = 'D';
+
+    // 2. Determine Context
+    let posCount = 0;
+    let negCount = 0;
+    KEYWORDS.sentiment.positive.forEach(w => { if(text.includes(w)) posCount++; });
+    KEYWORDS.sentiment.negative.forEach(w => { if(text.includes(w)) negCount++; });
+    const context = (posCount >= negCount * 1.5 || (posCount > 0 && negCount === 0)) ? 'high' : 'low';
+
+    return { type, context };
+}
+
+function getRandom(arr) {
+    if (!arr || arr.length === 0) return "";
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// --- Generation Logic (Grand Narrative) ---
+function generate(analysis, category, slotKey = null, retryCount = 0) {
+    const { type, context } = analysis;
+    let text = "";
+
+    // Common Parts
+    const opener = getRandom(VOCAB.openers);
+    const mod = getRandom(VOCAB.modifiers[context]);
+
+    if (category === 'policy') {
+        // [New Logic] Template based generation
+        const templates = VOCAB.policy[context];
+        const template = getRandom(templates);
+        const focus = VOCAB.policy.focus[type];
+        
+        text = template
+            .replace('{opener}', opener)
+            .replace('{mod}', mod)
+            .replace('{focus}', focus);
+
+    } else if (category === 'long') {
+        const templates = VOCAB.long_goal[context];
+        const template = getRandom(templates);
+        const focus = VOCAB.long_goal.focus[type];
+        
+        text = template
+            .replace('{mod}', mod)
+            .replace('{focus}', focus);
+
+    } else if (category === 'short') {
+        const templates = VOCAB.short_goal[context];
+        const template = getRandom(templates);
+        
+        text = template
+            .replace('{mod}', mod);
+
+    } else if (category === 'goal') {
+        // Individual Goal
+        const topic = getRandom(VOCAB.contents[slotKey].topic);
+        const end = getRandom(VOCAB.endings[`goal_${context}`]);
+        
+        if (context === 'high') text = `${topic}を${mod}${end}`;
+        else text = `${mod}${topic}を${end}`;
+
+    } else if (category === 'support') {
+        // Individual Support
+        const topic = getRandom(VOCAB.contents[slotKey].sup);
+        const end = getRandom(VOCAB.endings[`sup_${context}`]);
+        
+        if (context === 'high') text = `${topic}を通じて、${mod}${end}`;
+        else text = `必要に応じ${topic}を行い、${mod}${end}`;
+    }
+
+    // Cleanup & Retry
+    text = text.replace("  ", " ").trim();
+    if (generatedHistory.has(text) && retryCount < 20) {
+        return generate(analysis, category, slotKey, retryCount + 1);
+    }
+    generatedHistory.add(text);
+    return text;
+}
+
+function renderTable(workbook) {
+    tbody.innerHTML = '';
+    generatedHistory.clear();
+    let count = 0;
+
+    workbook.SheetNames.forEach(sheetName => {
+        if (sheetName.match(/設定|マスタ|config|list|一覧|Sheet/i)) return;
+
+        const sheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const fullText = json.map(row => row.join(' ')).join(' ');
+        
+        // Analyze
+        const analysis = analyze(fullText);
+
+        // Generate All Columns with Logic
+        const policy = generate(analysis, 'policy');
+        const longGoal = generate(analysis, 'long');
+        const shortGoal = generate(analysis, 'short');
+        
+        const l_g = generate(analysis, 'goal', 'life');
+        const l_s = generate(analysis, 'support', 'life');
+        const w_g = generate(analysis, 'goal', 'work');
+        const w_s = generate(analysis, 'support', 'work');
+        const f_g = generate(analysis, 'goal', 'future');
+        const f_s = generate(analysis, 'support', 'future');
+
+        // Badge
+        const badgeClass = analysis.context === 'high' ? 'badge-high' : 'badge-low';
+        const badgeText = analysis.context === 'high' ? '安定・良好' : '支援・課題';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight:bold; color:var(--text-main);">${sheetName}</td>
+            <td>
+                <div class="badge badge-${analysis.type}" style="margin-bottom:4px;">TYPE ${analysis.type}</div><br>
+                <div class="badge ${badgeClass}">${badgeText}</div>
+            </td>
+            <td>${policy}</td>
+            <td>${longGoal}</td>
+            <td>${shortGoal}</td>
+            <td class="col-life">${l_g}</td>
+            <td class="col-life">${l_s}</td>
+            <td class="col-work">${w_g}</td>
+            <td class="col-work">${w_s}</td>
+            <td class="col-future">${f_g}</td>
+            <td class="col-future">${f_s}</td>
+        `;
+        tbody.appendChild(tr);
+        count++;
+    });
+    document.getElementById('countDisplay').innerText = count;
+}
+
+function copyToClipboard() {
+    let txt = "";
+    const headers = Array.from(document.querySelectorAll('#resultTable thead th')).map(th => th.innerText);
+    txt += headers.join('\t') + '\n';
+    document.querySelectorAll('#resultTable tbody tr').forEach(tr => {
+        const tds = Array.from(tr.children).map(td => td.innerText.replace(/\n/g,' '));
+        txt += tds.join('\t') + '\n';
+    });
+    navigator.clipboard.writeText(txt).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const original = btn.innerHTML;
+        btn.innerHTML = "✅ 完了";
+        setTimeout(() => btn.innerHTML = original, 2000);
+    });
+}
+
+function downloadCSV() {
+    let csv = "";
+    const headers = Array.from(document.querySelectorAll('#resultTable thead th')).map(th => `"${th.innerText}"`);
+    csv += headers.join(',') + "\n";
+    document.querySelectorAll('#resultTable tbody tr').forEach(tr => {
+        const row = Array.from(tr.children).map(td => `"${td.innerText.replace(/"/g, '""')}"`);
+        csv += row.join(',') + "\n";
+    });
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '支援計画_AI生成案_Ver6.csv';
+    a.click();
+}
+</script>
+</body>
+</html>
